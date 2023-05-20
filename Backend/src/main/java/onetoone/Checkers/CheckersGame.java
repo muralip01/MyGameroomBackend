@@ -1,6 +1,9 @@
 package onetoone.Checkers;
 
 import onetoone.Checkers.Piece.Color;
+import onetoone.MatchHistories.MatchHistory;
+
+import javax.persistence.OneToOne;
 
 public class CheckersGame {
     private final CheckersBoard board;
@@ -24,6 +27,9 @@ public class CheckersGame {
     private boolean teamsMode;
     private int numberOfMoves;
     private int moveCounter;
+
+
+
 
     public CheckersGame(int gameId, int player1Id, int player2Id, int player3Id, int player4Id, boolean forceCaptures, boolean continuousCaptures, boolean teamsMode, int numberOfMoves) {
         this.gameId = gameId;
@@ -74,6 +80,7 @@ public class CheckersGame {
         boolean moveApplied = board.applyMove(move, currentPlayer, board.nextPlayer(currentPlayer));
         if (moveApplied) {
             moveCounter++;
+            checkGameStatus();
 
             if (teamsMode) {
                 int currentMove = moveCounter % (2 * numberOfMoves);
@@ -94,6 +101,40 @@ public class CheckersGame {
             } else {
                 switchCurrentPlayer();
             }
+        }
+    }
+
+    public void checkGameStatus() {
+        Piece.Color opponent = (currentPlayer == Color.RED) ? Color.BLACK : Color.RED;
+        boolean hasValidMoves = false;
+        boolean hasRemainingPieces = false;
+
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Piece piece = board.getPiece(row, col);
+                if (piece != null && piece.getColor() == opponent) {
+                    hasRemainingPieces = true;
+
+                    for (int newRow = 0; newRow < 8; newRow++) {
+                        for (int newCol = 0; newCol < 8; newCol++) {
+                            Move move = new Move(row, col, newRow, newCol);
+                            String validationResult = board.isValidMove(move, opponent, false);
+                            if (validationResult == null) {
+                                hasValidMoves = true;
+                                break;
+                            }
+                        }
+                        if (hasValidMoves) break;
+                    }
+                }
+                if (hasValidMoves) break;
+            }
+            if (hasValidMoves) break;
+        }
+
+        if (!hasValidMoves || !hasRemainingPieces) {
+            status = GameStatus.FINISHED;
+            gameOver = true;
         }
     }
 

@@ -198,7 +198,9 @@ public class CheckersBoard {
         return "Invalid move: Unknown error.";
     }
 
+    //fixed the continuous captures method
     public boolean applyMove(Move move, Piece.Color currentPlayer, Piece.Color nextPlayer) {
+        boolean hasCaptured = false;
         String validationResult = isValidMove(move, currentPlayer, false);
         if (validationResult != null) {
             return false;
@@ -219,23 +221,33 @@ public class CheckersBoard {
             int middleRow = (fromRow + toRow) / 2;
             int middleCol = (fromCol + toCol) / 2;
             setPiece(middleRow, middleCol, null);
-
-            if (continuousCaptures) {
-                boolean additionalCaptureAvailable = isCaptureAvailable(currentPlayer);
-                if (additionalCaptureAvailable) {
-                    validationResult = isValidMove(move, currentPlayer, true);
-                    if (validationResult == null) {
-                        return true;
-                    }
-                }
-            }
+            hasCaptured = true;
         }
 
         if (piece.getType() == Piece.Type.REGULAR && (toRow == 0 || toRow == 7)) {
             piece.setType(Piece.Type.KING);
         }
 
-        // Check if the next player's color matches the current player's color before allowing a move
+        if (continuousCaptures && hasCaptured) {
+            boolean additionalCaptureAvailable = false;
+            for (int newRow = 0; newRow < 8; newRow++) {
+                for (int newCol = 0; newCol < 8; newCol++) {
+                    Move nextMove = new Move(toRow, toCol, newRow, newCol);
+                    String nextValidationResult = isValidCaptureMove(nextMove, currentPlayer);
+                    if (nextValidationResult == null) {
+                        additionalCaptureAvailable = true;
+                        break;
+                    }
+                }
+                if (additionalCaptureAvailable) {
+                    break;
+                }
+            }
+            if (additionalCaptureAvailable) {
+                return false;
+            }
+        }
+
         return currentPlayer != nextPlayer;
     }
 

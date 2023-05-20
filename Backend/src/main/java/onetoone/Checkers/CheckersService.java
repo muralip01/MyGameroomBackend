@@ -49,7 +49,7 @@ public class CheckersService {
 
     public void forfeitGame(int gameId, int playerId) {
         CheckersGame game = getCheckersGameById(gameId);
-        if (game != null && (game.getPlayer1Id() == playerId || game.getPlayer2Id() == playerId)) {
+        if (game != null && (game.getPlayer1Id() == playerId || game.getPlayer2Id() == playerId || game.getPlayer3Id() == playerId || game.getPlayer4Id() == playerId)) {
             game.setStatus(CheckersGame.GameStatus.FORFEITED);
         }
     }

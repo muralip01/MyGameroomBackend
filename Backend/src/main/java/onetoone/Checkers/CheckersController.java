@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,6 +33,9 @@ public class CheckersController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private InvitationRepository invitationRepository;
+
     @ApiOperation(value = "Create a new checkers game, and specify players and rules", response = CheckersGame.class)
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Game created"),
@@ -38,6 +43,16 @@ public class CheckersController {
     })
     @PostMapping("/createGame")
     public ResponseEntity<?> createCheckersGame(@RequestBody CreateGameRequest request) {
+        /*
+        * Only 1 and 2 are mandatory. if 3 and 4 are not entered, teamsMode is set to false and 3 and 4 are set to -1.
+        * force default value is false and continuous is true. numberofmoves is when doing teamsMode,
+        * sets number of moves before switching player on a team.
+        * 1->2->3->4
+        * 4,2 black team
+        * 1,3 red team
+        * red goes first
+        */
+
         int player1Id = request.getPlayer1Id();
         int player2Id = request.getPlayer2Id();
         User player1 = userRepository.findById(player1Id);
@@ -69,7 +84,69 @@ public class CheckersController {
         }
 
         CheckersGame game = checkersService.createGame(player1Id, player2Id, player3Id, player4Id, forceCaptures, continuousCaptures, teamsMode, numberOfMoves);
+        //after creating the game, create and save the invitations
+        Invitation invitation1 = new Invitation(game.getGameId(), player2.getId(), "invited", "player2");
+        invitationRepository.save(invitation1);
+        if (teamsMode) {
+            Invitation invitation2 = new Invitation(game.getGameId(), game.getPlayer3Id(), "invited", "player3");
+            Invitation invitation3 = new Invitation(game.getGameId(), game.getPlayer4Id(), "invited", "player4");
+            invitationRepository.save(invitation2);
+            invitationRepository.save(invitation3);
+        }
         return ResponseEntity.ok(game);
+    }
+
+    @ApiOperation(value = "Accept an invitation", response = String.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Invitation accepted")
+    })
+    @PostMapping("/acceptInvitation/{invitationId}")
+    public ResponseEntity<String> acceptInvitation(@PathVariable int invitationId) {
+        Invitation invitation = invitationRepository.findById(invitationId).orElse(null);
+        if (invitation == null) {
+            return new ResponseEntity<>("Invitation not found with ID: " + invitationId, HttpStatus.NOT_FOUND);
+        }
+        // invitation.setStatus("accepted"); //redundant
+        // invitationRepository.save(invitation); //redundant
+        int gameId = invitation.getGameId();
+
+        invitationRepository.deleteById(invitationId);
+
+        return ResponseEntity.ok(Integer.toString(gameId));
+    }
+
+    @ApiOperation(value = "Reject an invitation", response = String.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Invitation rejected")
+    })
+    @PostMapping("/rejectInvitation/{invitationId}")
+    public ResponseEntity<?> rejectInvitation(@PathVariable int invitationId) {
+        Invitation invitation = invitationRepository.findById(invitationId).orElse(null);
+        if (invitation == null) {
+            return generateErrorResponse(HttpStatus.NOT_FOUND, "Invitation not found with ID: " + invitationId);
+        }
+        invitationRepository.deleteById(invitationId);
+        return ResponseEntity.ok("Invitation with ID: " + invitationId + " has been rejected.");
+    }
+
+    @ApiOperation(value = "Delete all existing invitations", response = String.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "All invitations deleted")
+    })
+    @DeleteMapping("/deleteAllInvitations")
+    public ResponseEntity<String> deleteAllInvitations() {
+        invitationRepository.deleteAll();
+        return ResponseEntity.ok("All invitations have been deleted.");
+    }
+
+    @ApiOperation(value = "Get all invitations received by the user", response = String.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Invitations retrieved")
+    })
+    @GetMapping("/getInvitations/{userId}")
+    public ResponseEntity<?> getInvitations(@PathVariable int userId) {
+        Iterable<Invitation> invitations = invitationRepository.findByUserId(userId);
+        return ResponseEntity.ok(invitations);
     }
 
     @ApiOperation(value = "Get a checkers game by ID", response = CheckersGame.class)
@@ -126,6 +203,10 @@ public class CheckersController {
         }
 
         game.applyMove(move);
+        if (game.getStatus() == CheckersGame.GameStatus.FINISHED) {
+            deleteInvitationsByGameId(gameId);
+        }
+
         return ResponseEntity.ok(game);
     }
 
@@ -184,12 +265,17 @@ public class CheckersController {
             return generateErrorResponse(HttpStatus.BAD_REQUEST, "Game not found with ID: " + gameId);
         }
 
-        if (game.getPlayer1Id() != playerId && game.getPlayer2Id() != playerId) {
+        if (game.getPlayer1Id() != playerId && game.getPlayer2Id() != playerId && game.getPlayer3Id() != playerId && game.getPlayer4Id() != playerId) {
             return generateErrorResponse(HttpStatus.BAD_REQUEST, "Player ID: " + playerId + " is not part of the game with ID: " + gameId);
         }
 
         checkersService.forfeitGame(gameId, playerId); // Call the forfeitGame method
+        deleteInvitationsByGameId(gameId);
         return ResponseEntity.ok("Game with ID: " + gameId + " has been forfeited by player ID: " + playerId);
     }
 
+    private void deleteInvitationsByGameId(int gameId) {
+        List<Invitation> invitations = invitationRepository.findByGameId(gameId);
+        invitationRepository.deleteAll(invitations);
+    }
 }

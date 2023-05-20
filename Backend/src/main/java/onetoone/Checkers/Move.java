@@ -1,5 +1,9 @@
 package onetoone.Checkers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+
 public class Move {
     private int fromRow;
     private int fromCol;
@@ -16,6 +20,10 @@ public class Move {
         this.toCol = toCol;
     }
 
+    public static Move fromString(String jsonString) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(jsonString, Move.class);
+    }
 
     public int getFromRow() {
         return fromRow;

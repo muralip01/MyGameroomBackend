@@ -1,5 +1,7 @@
 package onetoone.Checkers;
 
+import onetoone.MatchHistories.MatchHistory;
+
 import javax.persistence.*;
 
 @Entity
@@ -20,6 +22,9 @@ public class OngoingGame {
 
     @Column(name = "player4_id")
     private int player4Id;
+
+//        @OneToOne(mappedBy = "match_board")
+//    private MatchHistory matchHistory;
 
     public OngoingGame() {
     }

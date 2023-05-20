@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script>
+        let socket;
+
+        function connect() {
+            const gameId = document.getElementById("gameId").value;
+            const userId = document.getElementById("userId").value;
+            const serverUrl = "ws://localhost:8080/checkers/" + gameId + "/" + userId;
+            <!--const serverUrl = "ws://coms-309-003.class.las.iastate.edu:8080/checkers/" + gameId + "/" + userId;-->
+            socket = new WebSocket(serverUrl);
+
+            socket.onopen = function(event) {
+                console.log("Connected to server");
+            };
+
+            socket.onmessage = function(event) {
+                console.log("Received message: " + event.data);
+            };
+
+            socket.onclose = function(event) {
+                console.log("Disconnected from server");
+            };
+        }
+
+        function sendMove() {
+            const move = {
+                fromRow: parseInt(document.getElementById("fromRow").value),
+                fromCol: parseInt(document.getElementById("fromCol").value),
+                toRow: parseInt(document.getElementById("toRow").value),
+                toCol: parseInt(document.getElementById("toCol").value),
+            };
+
+            socket.send(JSON.stringify(move));
+        }
+
+    </script>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+
+    <label for="gameId">Game ID:</label>
+    <input type="text" id="gameId">
+    <br>
+    <label for="userId">User ID:</label>
+    <input type="text" id="userId">
+    <br>
+    <button onclick="connect()">Connect</button>
+    <hr>
+    <label for="fromRow">From Row:</label>
+    <input type="text" id="fromRow">
+    <br>
+    <label for="fromCol">From Col:</label>
+    <input type="text" id="fromCol">
+    <br>
+    <label for="toRow">To Row:</label>
+    <input type="text" id="toRow">
+    <br>
+    <label for="toCol">To Col:</label>
+    <input type="text" id="toCol">
+    <br>
+    <button onclick="sendMove()">Send Move</button>
+</body>
+</html>
