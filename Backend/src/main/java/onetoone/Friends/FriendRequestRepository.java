@@ -1,6 +1,10 @@
 package onetoone.Friends;
 
+import onetoone.Users.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
@@ -12,4 +16,11 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequest, Lo
     List<FriendRequest> findBySenderIdAndStatus(int senderId, FriendRequest.FriendRequestStatus status);
 
     List<FriendRequest> findByReceiverId(int id);
+
+    List<FriendRequest> findBySenderIdAndReceiverId(int id, int id1);
+
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM FriendRequest fr WHERE fr.sender = ?1 OR fr.receiver = ?1")
+    void deleteAllFriendRequestsByUser(User user);
 }

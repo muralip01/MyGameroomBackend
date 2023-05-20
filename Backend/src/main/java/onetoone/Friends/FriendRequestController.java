@@ -154,5 +154,25 @@ public class FriendRequestController {
             return "Error rejecting friend request: " + e.getMessage();
         }
     }
+
+    @ApiOperation(value = "Delete friend request", response = String.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Friend request deleted successfully"),
+            @ApiResponse(code = 400, message = "User or friend request not found | Error deleting friend request")
+    })
+    @DeleteMapping("/{receiverId}/delete/{senderId}")
+    public String deleteFriendRequest(@PathVariable int receiverId, @PathVariable int senderId) {
+        try {
+            List<FriendRequest> requests = friendRequestRepository.findBySenderIdAndReceiverId(senderId, receiverId);
+            if (requests == null || requests.isEmpty()) {
+                throw new RuntimeException("Friend request not found");
+            }
+            friendRequestRepository.deleteAll(requests);
+            return "Friend request deleted successfully.";
+        }
+        catch (Exception e) {
+            return "Error deleting friend request: " + e.getMessage();
+        }
+    }
 }
 
